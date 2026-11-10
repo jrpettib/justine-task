@@ -431,7 +431,7 @@
             
             let usedKeys = new Set();
             frameData.forEach(t => {
-                const validKey = keyPresses.find(k => !usedKeys.has(k) && (k - t.onset) >= 150 && (k - t.onset) <= 1000);
+                const validKey = keyPresses.find(k => !usedKeys.has(k) && (k - t.onset) >= 150 && (k - t.onset) <= 800);
                 if (validKey) {
                     hits++;
                     rts.push(validKey - t.onset);
