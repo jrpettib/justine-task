@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSVP Cognitive Effort Task</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: sans-serif; }
+        .hidden { display: none !important; }
+        .survey-container { max-height: 520px; overflow-y: auto; }
+        .error-border { border: 2px solid #f43f5e !important; background-color: rgba(76, 5, 25, 0.2) !important; }
+        
+        /* RSVP Visual Engine CSS */
+        #stage-task { touch-action: none; /* Prevents double-tap zooming on mobile during task */ }
+        #task-arena { position: relative; width: 400px; height: 400px; margin: 0 auto; cursor: pointer; }
+        .fixation { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2rem; color: white; }
+        .stream-letter { position: absolute; top: 50%; left: 50%; color: white; font-weight: bold; font-size: 2.5rem; pointer-events: none; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center pt-12 pb-16 px-6">
+
+    <!-- UPPER RIGHT SCOREBOARD -->
+    <div id="scoreboard" class="hidden fixed top-4 right-4 bg-slate-800 p-3 rounded-lg shadow-lg border-b-4 border-yellow-500 z-50">
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Total Points</p>
+        <p id="total-points-display" class="text-2xl font-bold text-yellow-500 text-right">0</p>
+    </div>
+
+    <!-- STAGE 1: CONSENT -->
+    <div id="stage-consent" class="max-w-3xl w-full bg-slate-800 p-10 rounded-xl shadow-xl mt-8">
+        <h1 class="text-3xl font-bold mb-6 border-b border-slate-700 pb-4 text-white">Informed Consent</h1>
+        
+        <p class="mb-4 text-slate-300">You are being invited to participate in a research study conducted as part of an undergraduate research course. The study examines how ADHD symptoms might impact choices related to effort and delay. The study is designed by Justine Klein, who is pursuing a bachelor's degree from Michigan Technological University and supervised by Dr. Jeffrey Pettibone PhD, from the Department of Psychology and Human Factors at Michigan Technological University. Your participation in this study is entirely voluntary, and you are free at any time to opt out/withdraw from the study by closing your browser window. The study should take around 30 minutes.</p>
+
+        <h2 class="text-xl font-semibold mt-6 mb-2 text-emerald-400">Participation Requirements</h2>
+        <p class="mb-4 text-slate-300">You must be 18 years or older to participate. You will be asked to complete 48 cognitive trials and then fill out a brief 20 item questionnaire at the end. Participation will require a phone, or tablet with a touchscreen or a laptop with a mouse, and a stable internet connection.</p>
+        
+        <h2 class="text-xl font-semibold mt-6 mb-2 text-emerald-400">Potential Risks</h2>
+        <p class="mb-4 text-slate-300">Participation in the study does not involve any risk to you beyond that of everyday life.</p>
+
+        <h2 class="text-xl font-semibold mt-6 mb-2 text-emerald-400">Potential Benefits</h2>
+        <p class="mb-4 text-slate-300">The potential benefit for this study is to contribute to the scientific literature on the understanding of ADHD. There is no direct benefit to you.</p>
+
+        <h2 class="text-xl font-semibold mt-6 mb-2 text-emerald-400">Compensation</h2>
+        <p class="mb-4 text-slate-300">Participation in this study will not provide any direct reward or compensation to you.</p>
+
+        <h2 class="text-xl font-semibold mt-6 mb-2 text-emerald-400">Confidentiality</h2>
+        <p class="mb-8 text-slate-300">No personally identifiable information will be collected. For surveys, participants' email will not be recorded. Only the Principal investigators will have access to the data collected.</p>
+        
+        <div class="mt-8 bg-slate-900 p-6 rounded-lg border border-slate-700">
+            <label class="flex items-start space-x-3 mb-4 cursor-pointer">
+                <input type="checkbox" id="consent-1" class="form-checkbox h-6 w-6 text-emerald-500 mt-1 rounded bg-slate-800 border-slate-600">
+                <span class="text-lg text-slate-200">I have read and understand the study information and requirements above.</span>
+            </label>
+            <label class="flex items-start space-x-3 mb-6 cursor-pointer">
+                <input type="checkbox" id="consent-2" class="form-checkbox h-6 w-6 text-emerald-500 mt-1 rounded bg-slate-800 border-slate-600">
+                <span class="text-lg text-slate-200">I agree to participate in this study.</span>
+            </label>
+            <button id="btn-start-practice" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-lg px-6 py-4 rounded-lg transition-all opacity-50 cursor-not-allowed" disabled>Accept Terms & Begin Practice</button>
+        </div>
+    </div>
+
+    <!-- STAGE 2: PRACTICE INTRO -->
+    <div id="stage-practice-intro" class="hidden max-w-2xl w-full text-center space-y-6 mt-12">
+        <h1 class="text-3xl font-bold text-emerald-400">Practice Phase</h1>
+        <p class="text-lg text-slate-300">You will now complete two practice trials to familiarize yourself with the task. The goal is to detect the letter ’T’ among a set of quickly changing letter streams. The first practice trial will be the easy, low effort version with 2 streams of letters.  The second practice trial will be the difficult, high effort version with 6 streams of letters.  The letter ’T’ will appear 3-5 times.  Try to detect all of them without missing any (Misses) or responding when one isn’t there (False Alarms). </p>
+        <p class="text-md text-slate-400">Press the <kbd class="bg-slate-700 px-2 py-1 rounded text-white">Spacebar</kbd> or <strong>Tap the Screen</strong> every time you see the letter <strong>'T'</strong>.</p>
+        <button id="btn-begin-practice-1" class="bg-emerald-600 px-8 py-3 rounded-lg text-white font-bold hover:bg-emerald-500 mt-4">Start Practice Trial 1</button>
+    </div>
+
+    <!-- STAGE 3: MAIN TASK INSTRUCTIONS -->
+    <div id="stage-main-intro" class="hidden max-w-3xl w-full bg-slate-800 p-10 rounded-xl shadow-xl mt-12">
+        <h1 class="text-3xl font-bold mb-6 border-b border-slate-700 pb-4 text-emerald-400">Main Task</h1>
+        <div class="text-lg leading-relaxed space-y-4 text-slate-300">
+            <p>Now that you have completed the practice trials, we will begin the main phase of the study.</p>
+            <p>In this phase, every block will begin with a choice, each associated with a different reward amount.</p>
+            <p>On some trials, you will choose between Low Difficulty (2 letters presented simultaneously) or High Difficulty (6 letters presented simultaneously). On other trials, you will choose between Short Delay (2 seconds until you see whether you were rewarded) and Long Delay (20 seconds until you see whether you were rewarded).</p>
+		        <p>Try to detect as many ’T’s as possible while minimizing Misses and False Alarms.  Blocks with more than two misses or more than three False Alarms will not be awarded points.</p>
+            <p class="font-bold text-white">Your goal is to maximize the number of points you accumulate over 48 blocks.</p>
+            <p class="font-bold text-emerald-400">Your current total points are shown on the upper right corner of your screen.</p>
+            <p>A brief demographic survey will follow regarding ADHD symptoms.</p>
+        </div>
+        <button id="btn-start-main" class="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-lg px-6 py-4 rounded-lg transition-all">Begin Block 1</button>
+    </div>
+
+    <!-- STAGE 4: CHOICE SCREEN -->
+    <div id="stage-choice" class="hidden max-w-4xl w-full mt-12">
+        <h2 id="module-header" class="text-center text-3xl font-bold mb-2 text-slate-300">Block 1 of 48</h2>
+        <h3 id="module-subheader" class="text-center text-lg font-semibold mb-8 text-emerald-400 uppercase tracking-wide"></h3>
+        <div class="flex justify-between gap-8">
+            <!-- LEFT CARD (EASY / SHORT) -->
+            <div id="card-left" class="flex-1 bg-slate-800 rounded-xl p-6 border-2 cursor-pointer transition-transform hover:scale-105 flex flex-col justify-between">
+                <div id="left-badge" class="text-center py-2 rounded font-bold uppercase tracking-wider mb-6 text-sm"></div>
+                <div class="flex justify-between items-center bg-slate-900 rounded-lg p-6">
+                    <div class="text-center w-1/2 border-r border-slate-700">
+                        <div id="left-delay-val" class="text-4xl font-bold text-white"></div>
+                        <div class="text-[11px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">delay</div>
+                    </div>
+                    <div class="text-center w-1/2">
+                        <div id="left-pts-val" class="text-4xl font-bold text-yellow-500"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- RIGHT CARD (HARD / LONG) -->
+            <div id="card-right" class="flex-1 bg-slate-800 rounded-xl p-6 border-2 cursor-pointer transition-transform hover:scale-105 flex flex-col justify-between">
+                <div id="right-badge" class="text-center py-2 rounded font-bold uppercase tracking-wider mb-6 text-sm"></div>
+                <div class="flex justify-between items-center bg-slate-900 rounded-lg p-6">
+                    <div class="text-center w-1/2 border-r border-slate-700">
+                        <div id="right-delay-val" class="text-4xl font-bold text-white"></div>
+                        <div class="text-[11px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">delay</div>
+                    </div>
+                    <div class="text-center w-1/2">
+                        <div id="right-pts-val" class="text-4xl font-bold text-yellow-500"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STAGE 5: RSVP TASK -->
+    <div id="stage-task" class="hidden text-center mt-12 w-full h-full flex flex-col items-center justify-center">
+        <p class="mb-4 text-slate-400">Press <kbd class="bg-slate-700 px-2 py-1 rounded text-white">Spacebar</kbd> or <strong>Tap Screen</strong> when you see 'T'</p>
+        <div id="task-arena" class="bg-slate-900 rounded-full border-4 border-slate-700">
+            <div class="fixation">+</div>
+            <div id="streams-container"></div>
+        </div>
+        <p class="mt-8 text-slate-500">24 frames @ 418ms</p>
+    </div>
+
+    <!-- STAGE 6: FEEDBACK & DELAY -->
+    <div id="stage-feedback" class="hidden max-w-xl w-full bg-slate-800 p-8 rounded-xl text-center shadow-xl mt-12">
+        <h2 id="feedback-title" class="text-3xl font-bold mb-6 text-white">Processing...</h2>
+        <div id="countdown-display" class="text-6xl font-bold text-white mb-6 hidden"></div>
+        <div id="feedback-stats" class="hidden text-left bg-slate-900 p-6 rounded-lg space-y-2 text-slate-300">
+            <p>Hits: <span id="stat-hits" class="text-emerald-400 font-bold"></span></p>
+            <p>Misses: <span id="stat-misses" class="font-bold text-white"></span></p>
+            <p>False Alarms: <span id="stat-fa" class="font-bold text-rose-400"></span></p>
+            <p class="border-t border-slate-700 pt-2 mt-2">Points Awarded: <span id="stat-points" class="text-yellow-500 font-bold text-xl"></span></p>
+        </div>
+        <button id="btn-next-trial" class="hidden mt-8 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg">Continue</button>
+    </div>
+
+    <!-- STAGE 7: SURVEY -->
+    <div id="stage-survey" class="hidden max-w-4xl w-full mt-8">
+        <div class="bg-slate-800 p-8 rounded-xl shadow-xl">
+            <h2 class="text-2xl font-bold mb-6 text-emerald-400 border-b border-slate-700 pb-2">Demographics & Post-Task Survey</h2>
+            <div class="grid grid-cols-2 gap-4 mb-8 text-slate-200">
+                <div><label class="block mb-1">Age</label><input type="number" id="dem-age" class="w-full bg-slate-900 border border-slate-600 p-2 rounded text-white" required></div>
+                <div><label class="block mb-1">Gender</label><select id="dem-gender" class="w-full bg-slate-900 border border-slate-600 p-2 rounded text-white" required><option value="">Select...</option><option>Male</option><option>Female</option><option>Non-Binary</option><option>Other</option></select></div>
+                <div><label class="block mb-1">Handedness</label><select id="dem-hand" class="w-full bg-slate-900 border border-slate-600 p-2 rounded text-white" required><option value="">Select...</option><option>Right</option><option>Left</option><option>Ambidextrous</option></select></div>
+                <div><label class="block mb-1">Task Effort Rating (1-10)</label><input type="number" min="1" max="10" id="dem-effort" class="w-full bg-slate-900 border border-slate-600 p-2 rounded text-white" required></div>
+            </div>
+            
+            <h3 class="text-xl font-bold mb-4 text-emerald-400">ASRS Questionnaire</h3>
+            <div id="survey-error-banner" class="hidden bg-rose-900/50 text-rose-300 p-3 rounded mb-4 font-bold border border-rose-500">Please answer all highlighted questions.</div>
+            <div id="asrs-container" class="survey-container pr-2 space-y-4"></div>
+            
+            <button id="btn-submit-data" class="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-lg text-lg">Submit Data</button>
+        </div>
+    </div>
+
+    <!-- STAGE 8: COMPLETE -->
+    <div id="stage-complete" class="hidden text-center bg-slate-800 p-10 rounded-xl shadow-xl max-w-xl mt-12">
+        <h1 class="text-4xl font-bold text-emerald-400 mb-4">Task Complete</h1>
+        <p class="text-lg text-slate-300 mb-2">Thank you for participating!</p>
+        <p class="text-slate-400">Your data has been securely saved.</p>
+    </div>
+
+    <script>
+        // ======================================================================
+        // 1. RESEARCHER SETUP: GOOGLE SHEETS WEBHOOK
+        // ======================================================================
+        const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzt-Sd43ZwkaXSy000xi2wDBVVCvXHV7Q8YH1XlsN4-GSSegbVJNORsY-ONSupJww9Z/exec"; 
+        
+        // ======================================================================
+        // 2. CORE TASK PARAMETERS & TRIAL RANDOMIZATION
+        // ======================================================================
+        const FRAME_DURATION_MS = 418;
+        const TOTAL_FRAMES = 24;
+        const RESPONSE_BUFFER_MS = 800;
+        const TOTAL_BLOCKS = 48;
+        
+        const subjID = "SUBJ-" + Math.floor(Math.random() * 900000 + 100000);
+        let currentBlock = 0;
+        let totalPoints = 0;
+        let isPractice = true;
+        let currentPhase = 'practice-1';
+        let experimentData = [];
+        let rsvpTimeout, bufferTimeout;
+        let activeTrial = null;
+        let currentTrialTargetCount = 0; // Tracks how many targets were actually chosen for scoring logic
+
+        // Generate the balanced trial sequence: 48 blocks total
+        // 24 blocks of Forced_Effort (Delay Choice), 24 blocks of Forced_Delay (Difficulty Choice)
+        // Within each 24, exactly 8 trials offer 20 pts, 8 offer 40 pts, and 8 offer 60 pts for the easy choice.
+        let trialSequence = [];
+        const easyRewards = [20, 40, 60];
+        easyRewards.forEach(pts => {
+            for(let i=0; i<8; i++) {
+                trialSequence.push({ condition: 'Forced_Effort', easyPoints: pts });
+                trialSequence.push({ condition: 'Forced_Delay', easyPoints: pts });
+            }
+        });
+
+        // Fisher-Yates Shuffle to completely randomize the trial order for every participant
+        for (let i = trialSequence.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [trialSequence[i], trialSequence[j]] = [trialSequence[j], trialSequence[i]];
+        }
+        
+        // ASRS Questions
+        const asrsQuestions = [
+            "How often do you have trouble wrapping up the final details of a project, once the challenging parts have been done?",
+            "How often do you have difficulty getting things in order when you have to do a task that requires organization?",
+            "How often do you have problems remembering appointments or obligations?",
+            "When you have a task that requires a lot of thought, how often do you avoid or delay getting started?",
+            "How often do you fidget or squirm with your hands or feet when you have to sit down for a long time?",
+            "How often do you feel overly active and compelled to do things, like you were driven by a motor?",
+            "How often do you make careless mistakes when you have to work on a boring or difficult project?",
+            "How often do you have difficulty keeping your attention when you are doing boring or repetitive work?",
+            "How often do you have difficulty concentrating on what people say to you, even when they are speaking to you directly?",
+            "How often do you misplace or have difficulty finding things at home or at work?",
+            "How often are you distracted by activity or noise around you?",
+            "How often do you leave your seat in meetings or other situations in which you are expected to remain seated?",
+            "How often do you feel restless or fidgety?",
+            "How often do you have difficulty unwinding and relaxing when you have time to yourself?",
+            "How often do you find yourself talking too much when you are in social situations?",
+            "When you’re in a conversation, how often do you find yourself finishing the sentences of the people you are talking to, before they can finish them themselves?",
+            "How often do you have difficulty waiting your turn in situations when turn taking is required?",
+            "How often do you interrupt others when they are busy?"
+        ];
+
+        const screens = {
+            consent: document.getElementById('stage-consent'),
+            practIntro: document.getElementById('stage-practice-intro'),
+            mainIntro: document.getElementById('stage-main-intro'),
+            choice: document.getElementById('stage-choice'),
+            task: document.getElementById('stage-task'),
+            feedback: document.getElementById('stage-feedback'),
+            survey: document.getElementById('stage-survey'),
+            complete: document.getElementById('stage-complete')
+        };
+
+        function showScreen(screenKey) {
+            Object.values(screens).forEach(s => s.classList.add('hidden'));
+            screens[screenKey].classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        const c1 = document.getElementById('consent-1');
+        const c2 = document.getElementById('consent-2');
+        const btnStart = document.getElementById('btn-start-practice');
+
+        function checkConsent() {
+            if (c1.checked && c2.checked) {
+                btnStart.disabled = false;
+                btnStart.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                btnStart.disabled = true;
+                btnStart.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+        
+        c1.addEventListener('change', checkConsent);
+        c2.addEventListener('change', checkConsent);
+
+        btnStart.addEventListener('click', () => {
+            if (c1.checked && c2.checked) {
+                showScreen('practIntro');
+            } else {
+                alert("Please check both consent boxes to proceed.");
+            }
+        });
+
+        document.getElementById('btn-begin-practice-1').addEventListener('click', () => {
+            startRSVPTrial({ streams: 2, delay: 2, points: 0, type: 'practice' });
+        });
+
+        document.getElementById('btn-start-main').addEventListener('click', () => {
+            isPractice = false;
+            currentBlock = 1;
+            document.getElementById('scoreboard').classList.remove('hidden');
+            renderChoiceScreen();
+        });
+
+        function renderChoiceScreen() {
+            showScreen('choice');
+            
+            // Fetch the pre-randomized trial configuration for this block
+            const currentTrial = trialSequence[currentBlock - 1]; 
+            const isDelayTrial = currentTrial.condition === 'Forced_Effort';
+            const easyPts = currentTrial.easyPoints;
+            
+            document.getElementById('module-header').innerText = `Block ${currentBlock} of ${TOTAL_BLOCKS}`;
+            const subHeader = document.getElementById('module-subheader');
+            
+            const cardLeft = document.getElementById('card-left');
+            const cardRight = document.getElementById('card-right');
+            
+            if (isDelayTrial) {
+                // Delay Trial: Effort is forced to Low (2 streams), choice is Delay
+                subHeader.innerText = "Forced Effort Block: Low Difficulty (2 Letters)";
+                
+                // LEFT CARD: SHORT DELAY (Easy)
+                document.getElementById('left-badge').className = "text-center py-2 rounded font-bold uppercase tracking-wider mb-6 text-sm border-emerald-500 bg-emerald-950/40 text-emerald-400";
+                document.getElementById('left-badge').innerText = 'Short Delay';
+                document.getElementById('left-delay-val').innerText = "2s";
+                document.getElementById('left-pts-val').innerText = `+${easyPts}`;
+                
+                // RIGHT CARD: LONG DELAY (Hard)
+                document.getElementById('right-badge').className = "text-center py-2 rounded font-bold uppercase tracking-wider mb-6 text-sm border-rose-500 bg-rose-950/40 text-rose-400";
+                document.getElementById('right-badge').innerText = 'Long Delay';
+                document.getElementById('right-delay-val').innerText = "20s";
+                document.getElementById('right-pts-val').innerText = "+80";
+
+                cardLeft.onclick = () => startRSVPTrial({ streams: 2, delay: 2, points: easyPts, type: 'main', condition: 'Forced_Effort' });
+                cardRight.onclick = () => startRSVPTrial({ streams: 2, delay: 20, points: 80, type: 'main', condition: 'Forced_Effort' });
+            } else {
+                // Difficulty Trial: Delay is forced to Short (2s), choice is Difficulty
+                subHeader.innerText = "Forced Delay Block: Short Delay (2 Seconds)";
+                
+                // LEFT CARD: LOW DIFFICULTY (Easy)
+                document.getElementById('left-badge').className = "text-center py-2 rounded font-bold uppercase tracking-wider mb-6 text-sm border-emerald-500 bg-emerald-950/40 text-emerald-400";
+                document.getElementById('left-badge').innerText = 'Low Difficulty';
+                document.getElementById('left-delay-val').innerText = "2s";
+                document.getElementById('left-pts-val').innerText = `+${easyPts}`;
+                
+                // RIGHT CARD: HIGH DIFFICULTY (Hard)
+                document.getElementById('right-badge').className = "text-center py-2 rounded font-bold uppercase tracking-wider mb-6 text-sm border-rose-500 bg-rose-950/40 text-rose-400";
+                document.getElementById('right-badge').innerText = 'High Difficulty';
+                document.getElementById('right-delay-val').innerText = "2s";
+                document.getElementById('right-pts-val').innerText = "+80";
+
+                cardLeft.onclick = () => startRSVPTrial({ streams: 2, delay: 2, points: easyPts, type: 'main', condition: 'Forced_Delay' });
+                cardRight.onclick = () => startRSVPTrial({ streams: 6, delay: 2, points: 80, type: 'main', condition: 'Forced_Delay' });
+            }
+        }
+
+        let frameData = [];
+        let keyPresses = [];
+
+        // INPUT LISTENERS: Keyboard AND Touch
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !screens.task.classList.contains('hidden')) {
+                keyPresses.push(performance.now());
+            }
+        });
+
+        // Register any pointer down (touch, stylus, mouse click) anywhere on screen during task
+        document.addEventListener('pointerdown', (e) => {
+            // Ignore if we aren't in the task phase
+            if (!screens.task.classList.contains('hidden')) {
+                // Ensure we don't accidentally register right clicks as hits
+                if (e.button === 0 || e.pointerType === 'touch' || e.pointerType === 'pen') {
+                    keyPresses.push(performance.now());
+                }
+            }
+        });
+
+        function startRSVPTrial(config) {
+            activeTrial = config;
+            frameData = [];
+            keyPresses = [];
+            showScreen('task');
+            
+            const container = document.getElementById('streams-container');
+            container.innerHTML = '';
+            
+            const radius = 90; 
+            for(let i=0; i<config.streams; i++) {
+                const angle = (i / config.streams) * (2 * Math.PI);
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                const el = document.createElement('div');
+                el.className = 'stream-letter';
+                el.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+                el.id = `stream-${i}`;
+                container.appendChild(el);
+            }
+
+            const targetFrames = [];
+            // Randomly choose 3, 4, or 5 targets for this block
+            currentTrialTargetCount = Math.floor(Math.random() * 3) + 3;
+            
+            while(targetFrames.length < currentTrialTargetCount) {
+                let f = Math.floor(Math.random() * (TOTAL_FRAMES - 4)) + 2;
+                if (!targetFrames.some(existing => Math.abs(existing - f) < 2)) {
+                    targetFrames.push(f);
+                }
+            }
+
+            let currentFrame = 0;
+            let lastTargetStream = -1;
+
+            function renderFrame() {
+                if (currentFrame >= TOTAL_FRAMES) {
+                    bufferTimeout = setTimeout(endRSVPTrial, RESPONSE_BUFFER_MS);
+                    return;
+                }
+
+                const isTarget = targetFrames.includes(currentFrame);
+                let targetStream = -1;
+                
+                if (isTarget) {
+                    do { targetStream = Math.floor(Math.random() * config.streams); } 
+                    while (targetStream === lastTargetStream && config.streams > 1);
+                    lastTargetStream = targetStream;
+                }
+
+                const onset = performance.now();
+                if (isTarget) frameData.push({ frame: currentFrame, onset: onset });
+
+                for(let i=0; i<config.streams; i++) {
+                    const charCode = isTarget && i === targetStream ? 84 : 65 + Math.floor(Math.random()*26);
+                    const finalChar = (charCode === 84 && (!isTarget || i !== targetStream)) ? 'X' : String.fromCharCode(charCode);
+                    document.getElementById(`stream-${i}`).innerText = finalChar;
+                }
+
+                currentFrame++;
+                rsvpTimeout = setTimeout(renderFrame, FRAME_DURATION_MS);
+            }
+
+            setTimeout(renderFrame, 500);
+        }
+
+        function endRSVPTrial() {
+            let hits = 0;
+            let misses = 0;
+            let falseAlarms = 0;
+            let rts = [];
+            
+            let usedKeys = new Set();
+            frameData.forEach(t => {
+                const validKey = keyPresses.find(k => !usedKeys.has(k) && (k - t.onset) >= 150 && (k - t.onset) <= 1000);
+                if (validKey) {
+                    hits++;
+                    rts.push(validKey - t.onset);
+                    usedKeys.add(validKey);
+                } else {
+                    misses++;
+                }
+            });
+
+            falseAlarms = keyPresses.length - usedKeys.size;
+            const meanRt = hits > 0 ? (rts.reduce((a,b)=>a+b,0)/hits).toFixed(0) : 0;
+            
+            // Allow the user to miss at most 1 target (misses < 2). 
+            // Depending on if 3, 4, or 5 targets were shown, this dynamic target count works out to missing max 1.
+            const passed = (hits > 1 && falseAlarms < 3 && misses < 2);
+            const awarded = passed ? activeTrial.points : 0;
+
+            if (!isPractice) {
+                experimentData.push({
+                    Subject_ID: subjID,
+                    Block_Number: currentBlock,
+                    Module: activeTrial.condition,
+                    Effort_Level: activeTrial.streams,
+                    Delay_Duration: activeTrial.delay,
+                    Target_Count: currentTrialTargetCount, // Store this in the exported data
+                    Hits: hits,
+                    Misses: misses,
+                    False_Alarms: falseAlarms,
+                    Mean_RT: meanRt,
+                    Points_Awarded: awarded
+                });
+            }
+
+            showFeedbackPhase(hits, misses, falseAlarms, awarded, activeTrial.delay);
+        }
+
+        function showFeedbackPhase(h, m, fa, pts, delay) {
+            showScreen('feedback');
+            const countdownEl = document.getElementById('countdown-display');
+            const statsEl = document.getElementById('feedback-stats');
+            const btnNext = document.getElementById('btn-next-trial');
+            const title = document.getElementById('feedback-title');
+            
+            countdownEl.classList.remove('hidden');
+            statsEl.classList.add('hidden');
+            btnNext.classList.add('hidden');
+            title.innerText = "Delay Phase";
+            
+            let timeLeft = delay;
+            countdownEl.innerText = timeLeft;
+            
+            const timer = setInterval(() => {
+                timeLeft--;
+                countdownEl.innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    countdownEl.classList.add('hidden');
+                    statsEl.classList.remove('hidden');
+                    title.innerText = "Outcome";
+                    
+                    document.getElementById('stat-hits').innerText = h;
+                    document.getElementById('stat-misses').innerText = m;
+                    document.getElementById('stat-fa').innerText = fa;
+                    document.getElementById('stat-points').innerText = `+${pts}`;
+
+                    // Update total points only when the outcome is revealed
+                    if (!isPractice) {
+                        totalPoints += pts;
+                        document.getElementById('total-points-display').innerText = totalPoints;
+                    }
+                    
+                    btnNext.classList.remove('hidden');
+                }
+            }, 1000);
+
+            btnNext.onclick = () => {
+                if (isPractice) {
+                    if (currentPhase === 'practice-1') {
+                        currentPhase = 'practice-2';
+                        showScreen('practIntro');
+                        document.getElementById('btn-begin-practice-1').innerText = "Start Practice Trial 2 (High Difficulty)";
+                        document.getElementById('btn-begin-practice-1').onclick = () => startRSVPTrial({ streams: 6, delay: 2, points: 0, type: 'practice' });
+                    } else {
+                        showScreen('mainIntro');
+                    }
+                } else {
+                    currentBlock++;
+                    if (currentBlock <= TOTAL_BLOCKS) {
+                        renderChoiceScreen();
+                    } else {
+                        buildSurvey();
+                    }
+                }
+            };
+        }
+
+        function buildSurvey() {
+            showScreen('survey');
+            const container = document.getElementById('asrs-container');
+            asrsQuestions.forEach((q, i) => {
+                const num = i + 1;
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 p-4 rounded-lg border border-slate-700 survey-card";
+                card.id = `asrs-card-${num}`;
+                
+                let html = `<p class="font-bold text-slate-200 mb-3">${num}. ${q}</p><div class="flex justify-between max-w-lg">`;
+                const opts = ["Never", "Rarely", "Sometimes", "Often", "Very often"];
+                opts.forEach((opt, idx) => {
+                    const val = idx + 1;
+                    html += `<label class="flex flex-col items-center cursor-pointer text-slate-400 hover:textEmerald-400">
+                        <input type="radio" name="asrs-${num}" value="${val}" class="mb-1 h-4 w-4 text-emerald-500 bg-slate-800">
+                        <span class="text-xs">${opt}</span>
+                    </label>`;
+                });
+                html += `</div>`;
+                card.innerHTML = html;
+                
+                card.addEventListener('change', () => card.classList.remove('error-border'));
+                container.appendChild(card);
+            });
+        }
+
+        document.getElementById('btn-submit-data').addEventListener('click', () => {
+            let isValid = true;
+            let firstError = null;
+            let asrsTotal = 0;
+            const asrsScores = [];
+
+            ['dem-age', 'dem-gender', 'dem-hand', 'dem-effort'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el.value) {
+                    isValid = false;
+                    el.classList.add('error-border');
+                    if (!firstError) firstError = el;
+                } else {
+                    el.classList.remove('error-border');
+                }
+            });
+
+            for (let i = 1; i <= 18; i++) {
+                const checked = document.querySelector(`input[name="asrs-${i}"]:checked`);
+                const card = document.getElementById(`asrs-card-${i}`);
+                if (!checked) {
+                    isValid = false;
+                    card.classList.add('error-border');
+                    if (!firstError) firstError = card;
+                } else {
+                    const score = parseInt(checked.value);
+                    asrsScores.push(score);
+                    asrsTotal += score;
+                }
+            }
+
+            if (!isValid) {
+                document.getElementById('survey-error-banner').classList.remove('hidden');
+                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
+            experimentData.forEach(row => {
+                row.Age = document.getElementById('dem-age').value;
+                row.Gender = document.getElementById('dem-gender').value;
+                row.Handedness = document.getElementById('dem-hand').value;
+                row.Task_Effort_Rating = document.getElementById('dem-effort').value;
+                asrsScores.forEach((score, idx) => { row[`ASRS_Q${idx+1}`] = score; });
+                row.ASRS_Total = asrsTotal;
+            });
+
+            submitToGoogle(experimentData);
+        });
+
+        function submitToGoogle(data) {
+            document.getElementById('btn-submit-data').innerText = "Sending Data...";
+            
+            if (!WEBHOOK_URL || WEBHOOK_URL === "" || WEBHOOK_URL.includes("YOUR_URL_HERE")) {
+                console.warn("No Webhook URL provided. Downloading CSV fallback.");
+                downloadCSV(data);
+                showScreen('complete');
+                return;
+            }
+
+            fetch(WEBHOOK_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).then(() => {
+                showScreen('complete');
+            }).catch(e => {
+                console.error(e);
+                downloadCSV(data);
+                showScreen('complete');
+            });
+        }
+        
+        function downloadCSV(data) {
+            if (data.length === 0) return;
+            const headers = Object.keys(data[0]);
+            const csv = [
+                headers.join(','), 
+                ...data.map(row => headers.map(h => row[h]).join(','))
+            ].join('\n');
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${subjID}_data.csv`;
+            a.click();
+        }
+    </script>
+</body>
+</html>
